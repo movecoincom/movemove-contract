@@ -60,9 +60,17 @@ contract MMCNFT is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply, IERC1155Rec
     }
 
     // Add Liquidity
-    function uniAddLiquidity(address _tokenA, address _tokenB, uint256 _amountA, uint256 _amountB, uint256 maxSlippage) external onlyOwner {
-        uint256 priceA = getLatestPrice(_tokenA, _tokenB); // Get the latest price of token A in terms of token B
-        uint256 minAmountB = (_amountA * (priceA * (100 - maxSlippage) / 100) / 1e18);
+    function uniAddLiquidity(
+        address _tokenA,
+        address _tokenB,
+        uint256 _amountA,
+        uint256 _amountB,
+        uint256 maxSlippage,
+        uint256 currentPrice
+    ) external onlyOwner {
+
+        uint256 minAmountA = (_amountB * (currentPrice * (100 - maxSlippage) / 100) / 1e18);
+        uint256 minAmountB = (_amountA * (currentPrice * (100 - maxSlippage) / 100) / 1e18);
 
         IERC20(_tokenA).safeIncreaseAllowance(address(uniswapV2Router), _amountA);
         IERC20(_tokenB).safeIncreaseAllowance(address(uniswapV2Router), _amountB);
@@ -74,7 +82,7 @@ contract MMCNFT is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply, IERC1155Rec
             _tokenB,
             _amountA,
             _amountB,
-            _amountA,  // Minimum amount of A expected
+            minAmountA,  // Minimum amount of A expected
             minAmountB,  // Minimum amount of B expected
             address(this),
             deadline
@@ -84,13 +92,17 @@ contract MMCNFT is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply, IERC1155Rec
     struct LiquidityParams {
         uint256 amountA;
         uint256 amountB;
-        uint256 latestPrice;
         uint256 minAmountA;
         uint256 minAmountB;
     }
 
     // Remove Liquidity
-    function uniRemoveLiquidity(address _tokenA, address _tokenB, uint256 _liquidity, uint256 maxSlippage) external onlyOwner {
+    function uniRemoveLiquidity(address _tokenA,
+        address _tokenB,
+        uint256 _liquidity,
+        uint256 maxSlippage,
+        uint256 currentPrice
+    ) external onlyOwner {
         address pairAddress = uniswapV2Factory.getPair(_tokenA, _tokenB);
         require(pairAddress != address(0), "No pool exists for this token pair");
         require(pairAddress == uniswapPair, "Uniswap pair mismatch");
@@ -101,7 +113,6 @@ contract MMCNFT is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply, IERC1155Rec
 
 
         LiquidityParams memory params;
-        params.latestPrice = getLatestPrice(_tokenA, _tokenB); // This will give us token B per token A
 
         IUniswapV2Pair pair = IUniswapV2Pair(pairAddress);
         (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
@@ -110,7 +121,7 @@ contract MMCNFT is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply, IERC1155Rec
         params.amountB = _liquidity * reserve1 / totalSupply;
 
         params.minAmountA = params.amountA * (100 - maxSlippage) / 100;
-        params.minAmountB = (params.amountA * params.latestPrice / 1e18) * (100 - maxSlippage) / 100; // Adjust amount B based on the latest price
+        params.minAmountB = (params.amountA * currentPrice / 1e18) * (100 - maxSlippage) / 100; // Adjust amount B based on the latest price
 
         uniswapV2Router.removeLiquidity(
             _tokenA,
