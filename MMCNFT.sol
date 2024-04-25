@@ -45,20 +45,6 @@ contract MMCNFT is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply, IERC1155Rec
         }
     }
 
-    function getLatestPrice(address _tokenA, address _tokenB) public view returns (uint price) {
-        address pairAddress = uniswapV2Factory.getPair(_tokenA, _tokenB);
-        require(pairAddress != address(0), "No pool exists for this token pair");
-        IUniswapV2Pair pair = IUniswapV2Pair(pairAddress);
-        (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
-        (address token0,) = (pair.token0(), pair.token1());
-        if (_tokenA == token0) {
-            price = (reserve1 * 1e18) / reserve0; // Convert to price per token A in terms of token B with 18 decimals
-        } else {
-            price = (reserve0 * 1e18) / reserve1;
-        }
-        return price;
-    }
-
     // Add Liquidity
     function uniAddLiquidity(
         address _tokenA,
@@ -111,9 +97,9 @@ contract MMCNFT is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply, IERC1155Rec
 
         IUniswapV2Pair pair = IUniswapV2Pair(pairAddress);
         (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
-        uint256 totalSupply = pair.totalSupply();
-        uint256 amountA = _liquidity * reserve0 / totalSupply;
-        uint256 amountB = _liquidity * reserve1 / totalSupply;
+
+        uint256 amountA = _liquidity * reserve0 / pair.totalSupply();
+        uint256 amountB = _liquidity * reserve1 / pair.totalSupply();
 
         uint256 minAmountA = amountA * (100 - slippage) / 100;
         uint256 minAmountB = amountB * (100 - slippage) / 100;
