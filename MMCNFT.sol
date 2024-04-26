@@ -51,8 +51,8 @@ contract MMCNFT is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply, IERC1155Rec
         address _tokenB,
         uint256 _amountA,
         uint256 _amountB,
-        uint256 amountADesired,
-        uint256 amountBDesired,
+        uint256 _minAmountA,
+        uint256 _minAmountB,
         uint256 slippage
     ) external onlyOwner {
 
@@ -63,17 +63,14 @@ contract MMCNFT is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply, IERC1155Rec
         // end date
         uint256 deadline = block.timestamp + 15 minutes;
 
-        uint256 minAmountA = amountADesired * (100 - slippage) / 100;
-        uint256 minAmountB = amountBDesired * (100 - slippage) / 100;
-
         // Add liquidity
         uniswapV2Router.addLiquidity(
             _tokenA,
             _tokenB,
             _amountA,
             _amountB,
-            minAmountA,  // minAmountA
-            minAmountB,  // minAmountB
+            _minAmountA,  // minAmountA
+            _minAmountB,  // minAmountB
             address(this),
             deadline
         );
@@ -85,7 +82,8 @@ contract MMCNFT is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply, IERC1155Rec
         address _tokenA,
         address _tokenB,
         uint256 _liquidity,
-        uint256 slippage
+        uint256 _minAmountA,
+        uint256 _minAmountB
     ) external onlyOwner {
         address pairAddress = uniswapV2Factory.getPair(_tokenA, _tokenB);
         require(pairAddress != address(0), "No pool exists for this token pair");
@@ -95,21 +93,13 @@ contract MMCNFT is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply, IERC1155Rec
 
         uint256 deadline = block.timestamp + 15 minutes; // Set deadline
 
-        IUniswapV2Pair pair = IUniswapV2Pair(pairAddress);
-        (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
-
-        uint256 amountA = _liquidity * reserve0 / pair.totalSupply();
-        uint256 amountB = _liquidity * reserve1 / pair.totalSupply();
-
-        uint256 minAmountA = amountA * (100 - slippage) / 100;
-        uint256 minAmountB = amountB * (100 - slippage) / 100;
-
+        // Remove Liquidity
         uniswapV2Router.removeLiquidity(
             _tokenA,
             _tokenB,
             _liquidity,
-            minAmountA,
-            minAmountB,
+            _minAmountA,
+            _minAmountB,
             address(this),
             deadline
         );
