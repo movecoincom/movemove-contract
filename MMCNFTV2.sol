@@ -179,12 +179,6 @@ contract MMCNFTV2 is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply, IERC1155R
         return this.onERC1155BatchReceived.selector;
     }
 
-    // Set Token URI individually
-    function setTokenURI(uint256 tokenId, string memory newUri) external onlyOwner {
-        require(bytes(newUri).length > 0, "Invalid request");
-        tokenInfo[tokenId].uri = newUri;
-    }
-
     // Set Token URI in batches
     function setTokenURIBatch(uint256[] memory tokenIds, string[] memory newUris) external onlyOwner {
         require(tokenIds.length == newUris.length, "Invalid request");
@@ -204,10 +198,11 @@ contract MMCNFTV2 is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply, IERC1155R
     // Mint Tokens in batches and set URI, price, and type
     function mintBatchWithUri(address to, uint256[] memory ids, uint256[] memory amounts, string[] memory tokenUris, uint256[] memory prices, uint8[] memory types, uint8[] memory statuses, bytes memory data) public onlyOwner {
         require(ids.length == amounts.length && ids.length == tokenUris.length && ids.length == prices.length && ids.length == types.length && ids.length == statuses.length, "Invalid request");
-        _mintBatch(to, ids, amounts, data);
         for (uint256 i = 0; i < ids.length; i++) {
+            require(!exists(ids[i]), "Token ID already exists"); // Check if the token already exists
             tokenInfo[ids[i]] = TokenInfo(prices[i], types[i], statuses[i], tokenUris[i]);
         }
+        _mintBatch(to, ids, amounts, data);
     }
 
     // Secure transfer of tokens
@@ -246,13 +241,6 @@ contract MMCNFTV2 is ERC1155, Ownable, ERC1155Burnable, ERC1155Supply, IERC1155R
         require(_status == 0 || _status == 1, "Invalid request");
         saleStatus = _status;
     }
-
-    // Set the price of Token
-//    function setTokenInfo(uint256 tokenId, uint256 price, uint8 _type, uint8 status) external onlyOwner {
-//        tokenInfo[tokenId].price = price;
-//        tokenInfo[tokenId].tokenType = _type;
-//        tokenInfo[tokenId].status = status;
-//    }
 
     // Set Token status
     function setTokenStatus(uint256 tokenId, uint8 status) external onlyOwner {
